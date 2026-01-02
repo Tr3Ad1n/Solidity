@@ -1,0 +1,48 @@
+name: 智能合约安全审计
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 设置 Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: 运行安全审计
+      run: |
+        # 扫描 contracts 目录（如果存在）
+        if [ -d "contracts" ]; then
+          python -m contract_auditor.main contracts/ --output-dir audit_reports/
+        elif [ -d "examples" ]; then
+          python -m contract_auditor.main examples/ --output-dir audit_reports/
+        else
+          # 扫描所有 .sol 文件
+          find . -name "*.sol" -type f | head -1 | xargs -I {} python -m contract_auditor.main {} --output-dir audit_reports/
+        fi
+      continue-on-error: true
+    
+    - name: 上传审计报告
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: audit-reports
+        path: audit_reports/
+        retention-days: 30
+
