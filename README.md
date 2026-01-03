@@ -105,7 +105,25 @@ python -m contract_auditor.main contract.sol --severity high
 
 ## 输出报告位置
 
-### 默认位置
+### 如果目录下既有单文件也有项目
+
+工具会自动分类并分别生成报告：
+
+```
+[输出目录]/
+├── single_files/      # 单文件报告
+│   ├── report.html
+│   └── report.json
+└── projects/          # 项目报告
+    ├── report.html
+    └── report.json
+```
+
+**分类规则：**
+- **单文件**：直接在目录下的.sol文件
+- **项目**：在 `contracts/`、`src/`、`solidity/` 等目录下的文件
+
+### 如果只有单文件或只有项目
 
 **单文件扫描：**
 ```
@@ -126,8 +144,9 @@ python -m contract_auditor.main contract.sol --severity high
 使用 `--output-dir` 参数指定自定义目录：
 
 ```bash
-python -m contract_auditor.main contract.sol --output-dir ./reports/
-# 报告保存在: ./reports/report.html 和 report.json
+python -m contract_auditor.main examples/ --output-dir ./reports/
+# 如果同时有单文件和项目，报告保存在:
+# ./reports/single_files/ 和 ./reports/projects/
 ```
 
 ### 报告文件

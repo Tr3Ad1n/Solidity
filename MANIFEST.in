@@ -1,0 +1,3 @@
+include contract_auditor/reporter/templates/*.html
+recursive-include contract_auditor *.html
+

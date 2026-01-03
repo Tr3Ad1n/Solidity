@@ -141,6 +141,26 @@ python -m contract_auditor.main examples/single_file_1.sol --format json --outpu
 
 ### 报告位置
 
+### 如果目录下既有单文件也有项目
+
+工具会自动分类并分别生成报告：
+
+```
+[输出目录]/
+├── single_files/      # 单文件报告
+│   ├── report.html
+│   └── report.json
+└── projects/          # 项目报告
+    ├── report.html
+    └── report.json
+```
+
+**分类规则：**
+- **单文件**：直接在目录下的.sol文件（如 `examples/single_file_1.sol`）
+- **项目**：在 `contracts/`、`src/`、`solidity/` 等目录下的文件
+
+### 如果只有单文件或只有项目
+
 **单文件扫描:**
 ```
 [合约文件目录]/audit_report_[时间戳]/

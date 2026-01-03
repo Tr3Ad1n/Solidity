@@ -104,6 +104,26 @@ git push -u origin main
 # 访问: https://github.com/你的用户名/你的仓库名/actions
 ```
 
+## 报告分类
+
+如果目录下既有单文件也有项目，工具会自动分类并分别生成报告：
+
+```
+audit_reports/
+├── single_files/      # 单文件报告
+│   ├── report.html
+│   └── report.json
+└── projects/          # 项目报告
+    ├── report.html
+    └── report.json
+```
+
+**分类规则：**
+- **单文件**：直接在目录下的.sol文件
+- **项目**：在 `contracts/`、`src/` 等目录下的文件
+
+如果只有单文件或只有项目，报告会直接保存在输出目录根目录。
+
 ## 注意事项
 
 1. **确保工作流文件已提交**
@@ -121,4 +141,8 @@ git push -u origin main
 4. **Artifact保留时间**
    - 默认保留30天
    - 过期后需要重新运行CI才能下载
+
+5. **报告分类**
+   - 如果同时有单文件和项目，会分别生成报告
+   - 下载Artifact后查看 `single_files/` 和 `projects/` 目录
 

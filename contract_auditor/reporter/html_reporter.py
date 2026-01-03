@@ -1,6 +1,7 @@
 """HTML报告生成器"""
 
 import os
+from pathlib import Path
 from datetime import datetime
 from jinja2 import Template
 from typing import List, Dict
@@ -13,11 +14,41 @@ class HTMLReporter:
     """HTML报告生成器"""
     
     def __init__(self):
-        self.template_path = os.path.join(
-            os.path.dirname(__file__), 
-            'templates', 
-            'report_template.html'
-        )
+        # 使用绝对路径，确保在CI环境中也能找到模板
+        current_file = Path(__file__).resolve()
+        template_file = current_file.parent / 'templates' / 'report_template.html'
+        
+        # 如果找不到，尝试多个可能的路径
+        if not template_file.exists():
+            # 尝试从项目根目录查找
+            possible_paths = [
+                Path.cwd() / 'contract_auditor' / 'reporter' / 'templates' / 'report_template.html',
+                current_file.parent.parent.parent / 'contract_auditor' / 'reporter' / 'templates' / 'report_template.html',
+                # 在CI环境中，可能是从site-packages安装的
+                Path(__file__).parent / 'templates' / 'report_template.html',
+            ]
+            
+            for path in possible_paths:
+                if path.exists():
+                    template_file = path
+                    break
+        
+        self.template_path = str(template_file)
+        
+        # 验证模板文件是否存在
+        if not Path(self.template_path).exists():
+            # 如果还是找不到，尝试使用相对路径（作为最后手段）
+            fallback_path = os.path.join(os.path.dirname(__file__), 'templates', 'report_template.html')
+            if os.path.exists(fallback_path):
+                self.template_path = fallback_path
+            else:
+                raise FileNotFoundError(
+                    f"HTML模板文件未找到。尝试的路径:\n"
+                    f"  - {template_file}\n"
+                    f"  - {fallback_path}\n"
+                    f"当前文件位置: {current_file}\n"
+                    f"请确保 templates/report_template.html 文件存在"
+                )
     
     def generate(self, issues: List[Issue], call_graph: Dict = None, 
                  taint_paths: List = None, control_flow: Dict = None,

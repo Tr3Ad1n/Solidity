@@ -60,45 +60,53 @@ python -m contract_auditor.main contract.sol --severity high
 
 ## 输出报告位置
 
-报告会保存在以下位置（按优先级）：
+### 如果目录下既有单文件也有项目
 
-### 1. 如果指定了 `--output-dir` 参数
+工具会自动分类并分别生成报告：
+
+```
+[输出目录]/
+├── single_files/      # 单文件报告
+│   ├── report.html
+│   └── report.json
+└── projects/          # 项目报告
+    ├── report.html
+    └── report.json
+```
+
+**分类规则：**
+- **单文件**：直接在目录下的.sol文件（如 `examples/single_file_1.sol`）
+- **项目**：在 `contracts/`、`src/`、`solidity/` 等目录下的文件
+
+**示例：**
+```bash
+python -m contract_auditor.main examples/ --output-dir ./reports/
+# 报告保存在:
+# ./reports/single_files/report.html 和 report.json
+# ./reports/projects/report.html 和 report.json
+```
+
+### 如果只有单文件或只有项目
+
+**1. 如果指定了 `--output-dir` 参数**
 ```
 [你指定的目录]/
 ├── report.html
 └── report.json
 ```
 
-**示例：**
-```bash
-python -m contract_auditor.main contract.sol --output-dir ./my_reports/
-# 报告保存在: ./my_reports/report.html 和 report.json
-```
-
-### 2. 如果扫描单文件（未指定输出目录）
+**2. 如果扫描单文件（未指定输出目录）**
 ```
 [合约文件所在目录]/audit_report_[时间戳]/
 ├── report.html
 └── report.json
 ```
 
-**示例：**
-```bash
-python -m contract_auditor.main examples/single_file_1.sol
-# 报告保存在: examples/audit_report_20260102_170103/report.html
-```
-
-### 3. 如果扫描项目目录（未指定输出目录）
+**3. 如果扫描项目目录（未指定输出目录）**
 ```
 [项目根目录]/audit_reports/[时间戳]/
 ├── report.html
 └── report.json
-```
-
-**示例：**
-```bash
-python -m contract_auditor.main examples/project/contracts/
-# 报告保存在: examples/project/contracts/audit_reports/20260102_170001/report.html
 ```
 
 ### 报告文件说明

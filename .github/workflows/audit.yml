@@ -29,17 +29,17 @@ jobs:
       run: |
         # 扫描 contracts 目录（如果存在）
         if [ -d "contracts" ]; then
-          python -m contract_auditor.main contracts/ --output-dir audit_reports/
+          python -m contract_auditor.main contracts/ --output-dir audit_reports/ --format both
         elif [ -d "examples" ]; then
-          python -m contract_auditor.main examples/ --output-dir audit_reports/
+          python -m contract_auditor.main examples/ --output-dir audit_reports/ --format both
         else
           # 扫描所有 .sol 文件
-          find . -name "*.sol" -type f | head -1 | xargs -I {} python -m contract_auditor.main {} --output-dir audit_reports/
+          find . -name "*.sol" -type f | head -1 | xargs -I {} python -m contract_auditor.main {} --output-dir audit_reports/ --format both
         fi
       continue-on-error: true
     
     - name: 上传审计报告
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       if: always()
       with:
         name: audit-reports
