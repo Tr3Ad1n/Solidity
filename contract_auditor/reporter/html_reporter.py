@@ -9,46 +9,98 @@ from ..detectors.base_detector import Issue
 from ..analyzer.call_graph import CallGraphAnalyzer
 from ..analyzer.taint_analysis import TaintAnalyzer
 
+try:
+    # Python 3.9+ 使用 importlib.resources
+    from importlib.resources import files, as_file
+    USE_IMPORTLIB = True
+except ImportError:
+    # Python 3.8 或更早版本使用 pkg_resources
+    try:
+        import pkg_resources
+        USE_IMPORTLIB = False
+    except ImportError:
+        USE_IMPORTLIB = None
+
+# 对于 Python 3.7-3.8，尝试使用 importlib_resources (backport)
+if USE_IMPORTLIB is None:
+    try:
+        import importlib_resources
+        USE_IMPORTLIB = 'backport'
+    except ImportError:
+        USE_IMPORTLIB = None
+
 
 class HTMLReporter:
     """HTML报告生成器"""
     
     def __init__(self):
-        # 使用绝对路径，确保在CI环境中也能找到模板
+        self.template_path = self._find_template()
+    
+    def _find_template(self) -> str:
+        """查找模板文件，支持多种环境"""
+        # 方法1: 尝试使用 importlib.resources (推荐，Python 3.9+)
+        if USE_IMPORTLIB is True:
+            try:
+                template_ref = files('contract_auditor.reporter.templates').joinpath('report_template.html')
+                if template_ref.is_file():
+                    with as_file(template_ref) as template_path:
+                        return str(template_path)
+            except (ImportError, FileNotFoundError, ModuleNotFoundError, AttributeError):
+                pass
+        
+        # 方法1b: 尝试使用 importlib_resources (backport for Python 3.7-3.8)
+        if USE_IMPORTLIB == 'backport':
+            try:
+                import importlib_resources
+                template_ref = importlib_resources.files('contract_auditor.reporter.templates').joinpath('report_template.html')
+                if template_ref.is_file():
+                    with importlib_resources.as_file(template_ref) as template_path:
+                        return str(template_path)
+            except (ImportError, FileNotFoundError, ModuleNotFoundError, AttributeError):
+                pass
+        
+        # 方法2: 尝试使用 pkg_resources (Python 3.8)
+        if USE_IMPORTLIB is False:
+            try:
+                template_path = pkg_resources.resource_filename(
+                    'contract_auditor.reporter.templates',
+                    'report_template.html'
+                )
+                if os.path.exists(template_path):
+                    return template_path
+            except (ImportError, FileNotFoundError, ModuleNotFoundError):
+                pass
+        
+        # 方法3: 使用文件系统路径查找（开发环境）
         current_file = Path(__file__).resolve()
         template_file = current_file.parent / 'templates' / 'report_template.html'
         
-        # 如果找不到，尝试多个可能的路径
-        if not template_file.exists():
-            # 尝试从项目根目录查找
-            possible_paths = [
-                Path.cwd() / 'contract_auditor' / 'reporter' / 'templates' / 'report_template.html',
-                current_file.parent.parent.parent / 'contract_auditor' / 'reporter' / 'templates' / 'report_template.html',
-                # 在CI环境中，可能是从site-packages安装的
-                Path(__file__).parent / 'templates' / 'report_template.html',
-            ]
-            
-            for path in possible_paths:
-                if path.exists():
-                    template_file = path
-                    break
+        if template_file.exists():
+            return str(template_file)
         
-        self.template_path = str(template_file)
+        # 方法4: 尝试其他可能的路径
+        possible_paths = [
+            Path.cwd() / 'contract_auditor' / 'reporter' / 'templates' / 'report_template.html',
+            current_file.parent.parent.parent / 'contract_auditor' / 'reporter' / 'templates' / 'report_template.html',
+            Path(__file__).parent / 'templates' / 'report_template.html',
+        ]
         
-        # 验证模板文件是否存在
-        if not Path(self.template_path).exists():
-            # 如果还是找不到，尝试使用相对路径（作为最后手段）
-            fallback_path = os.path.join(os.path.dirname(__file__), 'templates', 'report_template.html')
-            if os.path.exists(fallback_path):
-                self.template_path = fallback_path
-            else:
-                raise FileNotFoundError(
-                    f"HTML模板文件未找到。尝试的路径:\n"
-                    f"  - {template_file}\n"
-                    f"  - {fallback_path}\n"
-                    f"当前文件位置: {current_file}\n"
-                    f"请确保 templates/report_template.html 文件存在"
-                )
+        for path in possible_paths:
+            if path.exists():
+                return str(path)
+        
+        # 方法5: 最后尝试相对路径
+        fallback_path = os.path.join(os.path.dirname(__file__), 'templates', 'report_template.html')
+        if os.path.exists(fallback_path):
+            return fallback_path
+        
+        # 所有方法都失败
+        raise FileNotFoundError(
+            f"HTML模板文件未找到。\n"
+            f"当前文件位置: {Path(__file__).resolve()}\n"
+            f"请确保 templates/report_template.html 文件存在并被包含在包中。\n"
+            f"检查: .gitignore 是否忽略了模板文件，setup.py 是否正确配置了 package_data"
+        )
     
     def generate(self, issues: List[Issue], call_graph: Dict = None, 
                  taint_paths: List = None, control_flow: Dict = None,

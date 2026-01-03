@@ -39,6 +39,9 @@ audit_report_*/
 *.html
 *.json
 
+# 但保留模板文件
+!contract_auditor/reporter/templates/*.html
+
 # OS
 .DS_Store
 Thumbs.db

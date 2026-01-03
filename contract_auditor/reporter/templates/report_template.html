@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能合约安全审计报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .header {
+            background: #2c2c2c;
+            color: white;
+            padding: 40px;
+            text-align: center;
+            border-bottom: 3px solid #000;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .summary-card {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 5px;
+            text-align: center;
+            transition: transform 0.3s;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card.critical {
+            background: #1a1a1a;
+            color: white;
+            border-color: #000;
+        }
+        
+        .summary-card.high {
+            background: #4a4a4a;
+            color: white;
+            border-color: #333;
+        }
+        
+        .summary-card.medium {
+            background: #8a8a8a;
+            color: white;
+            border-color: #666;
+        }
+        
+        .summary-card.low {
+            background: #c0c0c0;
+            color: #000;
+            border-color: #999;
+        }
+        
+        .summary-card h3 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .summary-card p {
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #2c2c2c;
+            border-bottom: 2px solid #2c2c2c;
+            padding-bottom: 10px;
+        }
+        
+        .issue-card {
+            background: #fafafa;
+            border-left: 4px solid #666;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 3px;
+            transition: all 0.3s;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .issue-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateX(2px);
+        }
+        
+        .issue-card.critical {
+            border-left-color: #000;
+            background: #f5f5f5;
+            border-left-width: 5px;
+        }
+        
+        .issue-card.high {
+            border-left-color: #333;
+            background: #f8f8f8;
+        }
+        
+        .issue-card.medium {
+            border-left-color: #666;
+            background: #fafafa;
+        }
+        
+        .issue-card.low {
+            border-left-color: #999;
+            background: #fcfcfc;
+        }
+        
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .issue-type {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .severity-badge {
+            padding: 5px 15px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.9em;
+            border: 1px solid #000;
+        }
+        
+        .severity-badge.critical {
+            background: #000;
+            color: white;
+        }
+        
+        .severity-badge.high {
+            background: #333;
+            color: white;
+        }
+        
+        .severity-badge.medium {
+            background: #666;
+            color: white;
+        }
+        
+        .severity-badge.low {
+            background: #999;
+            color: white;
+        }
+        
+        .issue-details {
+            margin-top: 15px;
+        }
+        
+        .issue-detail-item {
+            margin-bottom: 10px;
+        }
+        
+        .issue-detail-item strong {
+            color: #2c2c2c;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .recommendation {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 3px;
+            margin-top: 15px;
+            border-left: 3px solid #333;
+        }
+        
+        .recommendation strong {
+            color: #000;
+        }
+        
+        .call-graph {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 3px;
+            margin-top: 20px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .taint-path {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            border-left: 3px solid #666;
+            border: 1px solid #e0e0e0;
+        }
+        
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .summary {
+                grid-template-columns: 1fr;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 智能合约安全审计报告</h1>
+            <p>生成时间: {{ timestamp }}</p>
+        </div>
+        
+        <div class="content">
+            <!-- 摘要 -->
+            <div class="section">
+                <h2 class="section-title">📊 检测摘要</h2>
+                <div class="summary">
+                    <div class="summary-card critical">
+                        <h3>{{ summary.critical }}</h3>
+                        <p>严重 (Critical)</p>
+                    </div>
+                    <div class="summary-card high">
+                        <h3>{{ summary.high }}</h3>
+                        <p>高危 (High)</p>
+                    </div>
+                    <div class="summary-card medium">
+                        <h3>{{ summary.medium }}</h3>
+                        <p>中危 (Medium)</p>
+                    </div>
+                    <div class="summary-card low">
+                        <h3>{{ summary.low }}</h3>
+                        <p>低危 (Low)</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>{{ summary.total_issues }}</h3>
+                        <p>总计</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 漏洞列表 -->
+            <div class="section">
+                <h2 class="section-title">⚠️ 发现的问题</h2>
+                {% for issue in issues %}
+                <div class="issue-card {{ issue.severity.lower() }}">
+                    <div class="issue-header">
+                        <span class="issue-type">{{ issue.type }}</span>
+                        <span class="severity-badge {{ issue.severity.lower() }}">{{ issue.severity }}</span>
+                    </div>
+                    <div class="issue-details">
+                        <div class="issue-detail-item">
+                            <strong>文件:</strong> {{ issue.file }}
+                        </div>
+                        <div class="issue-detail-item">
+                            <strong>函数:</strong> {{ issue.function or 'N/A' }}
+                        </div>
+                        <div class="issue-detail-item">
+                            <strong>行号:</strong> {{ issue.line }}
+                        </div>
+                        <div class="issue-detail-item">
+                            <strong>描述:</strong> {{ issue.description }}
+                        </div>
+                        <div class="recommendation">
+                            <strong>💡 修复建议:</strong> {{ issue.recommendation }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 调用图 -->
+            {% if call_graph %}
+            <div class="section">
+                <h2 class="section-title">🔗 调用图分析</h2>
+                <div class="call-graph">
+                    <p>调用图包含 {{ call_graph.nodes|length }} 个节点和 {{ call_graph.edges|length }} 条边。</p>
+                    <div style="margin-top: 15px;">
+                        <h4>节点列表:</h4>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            {% for node in call_graph.nodes %}
+                            <li style="margin: 5px 0;">{{ node.label }} ({{ node.type }})</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 控制流分析 -->
+            {% if control_flow %}
+            <div class="section">
+                <h2 class="section-title">🔄 控制流分析</h2>
+                <div class="call-graph">
+                    <p>已分析 {{ control_flow|length }} 个函数的控制流图。</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background: #e0e0e0;">
+                                <th style="padding: 10px; border: 1px solid #ccc; text-align: left;">函数</th>
+                                <th style="padding: 10px; border: 1px solid #ccc; text-align: left;">节点数</th>
+                                <th style="padding: 10px; border: 1px solid #ccc; text-align: left;">边数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for func_name, cfg_info in control_flow.items() %}
+                            <tr>
+                                <td style="padding: 8px; border: 1px solid #ccc;">{{ func_name }}</td>
+                                <td style="padding: 8px; border: 1px solid #ccc;">{{ cfg_info.nodes }}</td>
+                                <td style="padding: 8px; border: 1px solid #ccc;">{{ cfg_info.edges }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 污点分析 -->
+            {% if taint_paths %}
+            <div class="section">
+                <h2 class="section-title">🔍 污点分析</h2>
+                {% for path in taint_paths %}
+                <div class="taint-path">
+                    <strong>污点源:</strong> {{ path.source.name }} ({{ path.source.type }}) - 行 {{ path.source.line }}<br>
+                    <strong>污点汇:</strong> {{ path.sink.name }} ({{ path.sink.type }}) - 行 {{ path.sink.line }}<br>
+                    <strong>传播路径:</strong> {{ path.path|join(' → ') }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- 数据流分析 -->
+            {% if data_flow %}
+            <div class="section">
+                <h2 class="section-title">📊 数据流分析</h2>
+                <div class="call-graph">
+                    <p>已分析 {{ data_flow|length }} 个函数的数据流。</p>
+                    {% for func_name, flows in data_flow.items() %}
+                    <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 3px;">
+                        <strong>{{ func_name }}</strong>
+                        {% if flows %}
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            {% for flow in flows %}
+                            <li style="margin: 5px 0;">
+                                变量 <code>{{ flow.variable }}</code>: 
+                                定义于行 {{ flow.definition_line }}, 
+                                使用于行 {{ flow.use_lines|join(', ') }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="margin-top: 10px; color: #666;">未发现数据流</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+</body>
+</html>
+
