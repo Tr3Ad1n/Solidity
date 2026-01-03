@@ -27,7 +27,11 @@ jobs:
     
     - name: 运行安全审计
       run: |
-        # 扫描 examples 目录（工具会自动分类单文件和项目）
+        # 扫描 examples 目录（工具会自动分类单文件和项目，支持多项目）
+        # 工具会自动识别：
+        # - 单文件：examples/single_file_*.sol
+        # - 项目：examples/project/contracts/ (传统项目结构)
+        # - 多项目：examples/project/defi-platform/ (project下的子目录)
         # 使用 || true 确保即使发现漏洞，CI 也不会失败
         python -m contract_auditor.main examples/ --output-dir audit_reports/ --format both || true
       continue-on-error: true

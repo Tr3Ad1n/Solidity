@@ -17,7 +17,7 @@ setup(
     package_data={
         'contract_auditor': [
             'reporter/templates/*.html',
-        ],
+        ],  
     },
     install_requires=[
         "pygments>=2.15.0",

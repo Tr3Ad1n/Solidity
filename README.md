@@ -162,6 +162,17 @@ python -m contract_auditor.main examples/ --output-dir ./all_reports/
 # 报告保存在: ./all_reports/single_files/ 和 ./all_reports/projects/
 ```
 
+**4. 扫描包含多个项目的目录**
+
+```bash
+# 扫描包含多个项目的目录（如 examples/project/）
+python -m contract_auditor.main examples/project/ --output-dir ./multi_project_reports/
+
+# 工具会自动识别 project/ 下的每个子目录为独立项目
+# 每个项目会单独生成报告
+# 报告保存在: ./multi_project_reports/projects/[项目名]/
+```
+
 #### 完整操作流程示例
 
 ```bash
@@ -193,14 +204,39 @@ start examples\audit_report_20260102_170103\report.html
 ├── single_files/      # 单文件报告
 │   ├── report.html
 │   └── report.json
-└── projects/          # 项目报告
+└── projects/          # 项目报告（如果只有一个项目）
     ├── report.html
     └── report.json
 ```
 
+### 如果目录下包含多个项目
+
+工具会为每个项目单独生成报告：
+
+```
+[输出目录]/
+├── single_files/      # 单文件报告（如果有）
+│   ├── report.html
+│   └── report.json
+└── projects/          # 项目报告目录
+    ├── project1/     # 项目1的报告
+    │   ├── report.html
+    │   └── report.json
+    ├── project2/      # 项目2的报告
+    │   ├── report.html
+    │   └── report.json
+    └── defi-platform/ # 项目3的报告
+        ├── report.html
+        └── report.json
+```
+
 **分类规则：**
 - **单文件**：直接在目录下的.sol文件（如 `examples/single_file_1.sol`）
-- **项目**：在 `contracts/`、`src/`、`solidity/` 等目录下的文件，或目录下有多个.sol文件
+- **项目容器目录**：`project/` 或 `projects/` 目录下的子目录被视为独立项目
+  - 例如：`examples/project/defi-platform/` → 项目名：`defi-platform`
+  - 例如：`examples/project/contracts/` → 项目名：`contracts`
+- **传统项目结构**：在 `contracts/`、`src/`、`solidity/` 等目录下的文件
+- **多文件目录**：目录下有多个.sol文件且目录名包含 `contract` 关键词
 
 ### 如果只有单文件或只有项目
 
@@ -310,7 +346,25 @@ audit-reports.zip (下载后解压)
     └── report.json
 ```
 
-如果只有单文件或只有项目：
+如果包含多个项目：
+```
+audit-reports.zip (下载后解压)
+├── single_files/          # 单文件报告（如果有）
+│   ├── report.html
+│   └── report.json
+└── projects/              # 项目报告目录
+    ├── project1/         # 项目1
+    │   ├── report.html
+    │   └── report.json
+    ├── project2/         # 项目2
+    │   ├── report.html
+    │   └── report.json
+    └── defi-platform/    # 项目3
+        ├── report.html
+        └── report.json
+```
+
+如果只有单文件或只有一个项目：
 ```
 audit-reports.zip (下载后解压)
 ├── report.html
@@ -359,19 +413,62 @@ CI会在以下情况自动触发：
 
 5. **报告分类**
    - 如果同时有单文件和项目，会分别生成报告
+   - 如果包含多个项目，每个项目会单独生成报告
    - 下载Artifact后查看 `single_files/` 和 `projects/` 目录
+   - 多项目情况下，`projects/` 下会有多个子目录，每个子目录对应一个项目
 
 ## 测试示例
 
 项目包含测试示例合约，位于 `examples/` 目录：
 
-- **单文件示例：**
-  - `examples/single_file_1.sol` - 包含重入、权限控制、未检查返回值等漏洞
-  - `examples/single_file_2.sol` - 包含delegatecall和外部调用风险
+### 单文件示例
 
-- **项目示例：**
-  - `examples/project/contracts/Token.sol` - 代币合约
-  - `examples/project/contracts/Vault.sol` - 保险库合约
+- `examples/single_file_1.sol` - 包含重入、权限控制、未检查返回值等漏洞
+- `examples/single_file_2.sol` - 包含delegatecall和外部调用风险
+
+### 项目示例
+
+#### 1. 简单项目 (`examples/project/contracts/`)
+
+- `Token.sol` - ERC20代币合约（包含权限控制缺失漏洞）
+- `Vault.sol` - 保险库合约（包含重入攻击、权限控制、未检查返回值等漏洞）
+
+#### 2. DeFi平台项目 (`examples/project/defi-platform/`)
+
+一个完整的DeFi平台示例，包含多个合约文件，结构类似真实项目：
+
+**目录结构：**
+```
+defi-platform/
+├── contracts/              # 主要合约
+│   ├── ERC20.sol          # ERC20标准实现
+│   ├── StakingPool.sol    # 质押池合约（重入、权限控制漏洞）
+│   ├── LiquidityPool.sol  # 流动性池合约（重入、delegatecall漏洞）
+│   └── Governance.sol    # 治理合约（权限控制、未检查返回值漏洞）
+├── interfaces/            # 接口定义
+│   └── IStakingPool.sol   # 质押池接口
+└── libraries/             # 工具库
+    └── Math.sol           # 数学工具库
+```
+
+**漏洞类型覆盖：**
+- ✅ 重入攻击风险（StakingPool, LiquidityPool）
+- ✅ 权限控制缺失（ERC20, StakingPool, Governance）
+- ✅ 外部调用风险（多个合约）
+- ✅ 未检查返回值（Vault, StakingPool, Governance）
+- ✅ 危险的delegatecall（LiquidityPool）
+
+**测试命令：**
+```bash
+# 扫描单个项目
+python -m contract_auditor.main examples/project/contracts/
+
+# 扫描包含多个项目的目录
+python -m contract_auditor.main examples/project/ --output-dir ./test_reports/
+
+# 扫描整个examples目录（包含单文件和多个项目）
+python -m contract_auditor.main examples/ --output-dir ./all_reports/
+```
 
 ## 故障排查
 

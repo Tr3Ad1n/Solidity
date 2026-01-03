@@ -209,12 +209,17 @@ def main(input_path, output_dir, format, severity):
         
         if is_single_file:
             # 单文件模式：直接处理
-            classified = {'single_files': files, 'projects': []}
+            classified = {'single_files': files, 'projects': {}}
         else:
             # 目录模式：分类文件
             classified = classify_files(files, str(input_path_obj))
             print(Fore.CYAN + f"  单文件: {len(classified['single_files'])} 个" + Style.RESET_ALL)
-            print(Fore.CYAN + f"  项目文件: {len(classified['projects'])} 个" + Style.RESET_ALL)
+            # projects 现在是字典
+            total_project_files = sum(len(files) for files in classified['projects'].values())
+            print(Fore.CYAN + f"  项目: {len(classified['projects'])} 个，共 {total_project_files} 个文件" + Style.RESET_ALL)
+            if classified['projects']:
+                for proj_name, proj_files in classified['projects'].items():
+                    print(Fore.CYAN + f"    - {proj_name}: {len(proj_files)} 个文件" + Style.RESET_ALL)
         
         # 确定输出目录
         base_output_dir = get_output_directory(input_path, output_dir)
@@ -238,7 +243,7 @@ def main(input_path, output_dir, format, severity):
         # 处理单文件和项目，分别生成报告
         reports_generated = []
         filtered_single_issues = []
-        filtered_projects_issues = []
+        all_projects_issues = []  # 存储所有项目的问题
         
         # 处理单文件
         if classified['single_files']:
@@ -283,48 +288,62 @@ def main(input_path, output_dir, format, severity):
                 print(Fore.GREEN + f"  单文件HTML报告: {html_path}" + Style.RESET_ALL)
                 reports_generated.append(html_path)
         
-        # 处理项目
+        # 处理项目（为每个项目单独生成报告）
+        all_projects_issues = []
+        project_issues_map = {}  # 存储每个项目的问题列表
         if classified['projects']:
             print(Fore.YELLOW + "\n" + "="*60 + Style.RESET_ALL)
             print(Fore.YELLOW + "处理项目文件..." + Style.RESET_ALL)
             
-            projects_issues, projects_data = _process_files(
-                classified['projects'], parser, detectors,
-                call_graph_analyzer=CallGraphAnalyzer(),
-                taint_analyzer=TaintAnalyzer(),
-                control_flow_analyzer=ControlFlowAnalyzer(),
-                data_flow_analyzer=DataFlowAnalyzer()
-            )
-            
-            # 过滤风险等级
-            filtered_projects_issues = _filter_by_severity(projects_issues, severity)
-            
-            # 生成报告
+            # 确定项目报告的基础目录
             if has_both:
                 # 有单文件和项目，使用子目录
-                projects_output_dir = Path(base_output_dir) / "projects"
-                projects_output_dir.mkdir(parents=True, exist_ok=True)
+                projects_base_dir = Path(base_output_dir) / "projects"
             else:
                 # 只有项目，使用原输出目录
-                projects_output_dir = Path(base_output_dir)
+                projects_base_dir = Path(base_output_dir)
+            projects_base_dir.mkdir(parents=True, exist_ok=True)
             
-            if format in ['json', 'both']:
-                json_path = str(projects_output_dir / "report.json")
-                json_reporter.generate(filtered_projects_issues, projects_data['call_graph'],
-                                     projects_data['taint_paths'],
-                                     projects_data['control_flow'],
-                                     projects_data['data_flow'], json_path)
-                print(Fore.GREEN + f"  项目JSON报告: {json_path}" + Style.RESET_ALL)
-                reports_generated.append(json_path)
-            
-            if format in ['html', 'both']:
-                html_path = str(projects_output_dir / "report.html")
-                html_reporter.generate(filtered_projects_issues, projects_data['call_graph'],
-                                      projects_data['taint_paths'],
-                                      projects_data['control_flow'],
-                                      projects_data['data_flow'], html_path)
-                print(Fore.GREEN + f"  项目HTML报告: {html_path}" + Style.RESET_ALL)
-                reports_generated.append(html_path)
+            # 为每个项目单独生成报告
+            for project_name, project_files in classified['projects'].items():
+                print(Fore.YELLOW + f"\n处理项目: {project_name}" + Style.RESET_ALL)
+                
+                # 处理当前项目的文件
+                project_issues, project_data = _process_files(
+                    project_files, parser, detectors,
+                    call_graph_analyzer=CallGraphAnalyzer(),
+                    taint_analyzer=TaintAnalyzer(),
+                    control_flow_analyzer=ControlFlowAnalyzer(),
+                    data_flow_analyzer=DataFlowAnalyzer()
+                )
+                
+                # 过滤风险等级
+                filtered_project_issues = _filter_by_severity(project_issues, severity)
+                all_projects_issues.extend(filtered_project_issues)
+                project_issues_map[project_name] = filtered_project_issues  # 保存每个项目的问题
+                
+                # 为当前项目创建单独的报告目录
+                project_output_dir = projects_base_dir / project_name
+                project_output_dir.mkdir(parents=True, exist_ok=True)
+                
+                # 生成报告
+                if format in ['json', 'both']:
+                    json_path = str(project_output_dir / "report.json")
+                    json_reporter.generate(filtered_project_issues, project_data['call_graph'],
+                                         project_data['taint_paths'],
+                                         project_data['control_flow'],
+                                         project_data['data_flow'], json_path)
+                    print(Fore.GREEN + f"  {project_name} JSON报告: {json_path}" + Style.RESET_ALL)
+                    reports_generated.append(json_path)
+                
+                if format in ['html', 'both']:
+                    html_path = str(project_output_dir / "report.html")
+                    html_reporter.generate(filtered_project_issues, project_data['call_graph'],
+                                          project_data['taint_paths'],
+                                          project_data['control_flow'],
+                                          project_data['data_flow'], html_path)
+                    print(Fore.GREEN + f"  {project_name} HTML报告: {html_path}" + Style.RESET_ALL)
+                    reports_generated.append(html_path)
         
         # 显示摘要
         print(Fore.CYAN + Style.BRIGHT + "\n" + "="*60)
@@ -338,7 +357,7 @@ def main(input_path, output_dir, format, severity):
         if classified['single_files']:
             all_filtered_issues.extend(filtered_single_issues)
         if classified['projects']:
-            all_filtered_issues.extend(filtered_projects_issues)
+            all_filtered_issues.extend(all_projects_issues)
         
         if all_filtered_issues:
             severity_counts = Counter([str(issue.severity) for issue in all_filtered_issues])
@@ -351,12 +370,21 @@ def main(input_path, output_dir, format, severity):
             
             if classified['single_files'] and classified['projects']:
                 print(f"\n  单文件: {len(filtered_single_issues)} 个问题")
-                print(f"  项目: {len(filtered_projects_issues)} 个问题")
+                print(f"  项目: {len(all_projects_issues)} 个问题")
+            elif classified['projects']:
+                # 显示每个项目的问题数
+                for project_name in classified['projects'].keys():
+                    project_issues_count = len(project_issues_map.get(project_name, []))
+                    print(f"  {project_name}: {project_issues_count} 个问题")
         
         print(Fore.GREEN + f"\n报告已保存到: {base_output_dir}" + Style.RESET_ALL)
         if classified['single_files'] and classified['projects']:
             print(Fore.CYAN + f"  单文件报告: {base_output_dir}/single_files/" + Style.RESET_ALL)
             print(Fore.CYAN + f"  项目报告: {base_output_dir}/projects/" + Style.RESET_ALL)
+        elif classified['projects']:
+            print(Fore.CYAN + f"  项目报告: {base_output_dir}/projects/" + Style.RESET_ALL)
+            for project_name in classified['projects'].keys():
+                print(Fore.CYAN + f"    - {project_name}: {base_output_dir}/projects/{project_name}/" + Style.RESET_ALL)
         
         if len(all_filtered_issues) > 0:
             sys.exit(1)  # 有漏洞时返回非0退出码
