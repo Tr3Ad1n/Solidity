@@ -1,4 +1,7 @@
-"""主入口和CLI接口"""
+"""主入口和CLI接口
+
+Author: tr3
+"""
 
 import click
 import sys
@@ -127,21 +130,65 @@ def _filter_by_severity(issues: List, severity: str):
     ]
 
 
-@click.command()
-@click.argument('input_path', type=click.Path(exists=True))
-@click.option('--output-dir', '-o', type=click.Path(), help='输出目录')
+@click.command(
+    help='智能合约安全审计工具\n\n扫描 Solidity 智能合约，检测安全漏洞并生成报告。',
+    context_settings={'help_option_names': ['-h', '--help']}
+)
+@click.argument('input_path', required=False)
+@click.option('--output-dir', '-o', type=click.Path(), 
+              help='指定报告输出目录（默认：合约文件目录或项目根目录）')
 @click.option('--format', '-f', type=click.Choice(['json', 'html', 'both'], case_sensitive=False), 
-              default='both', help='输出格式')
+              default='both', help='输出格式：json/html/both（默认：both）')
 @click.option('--severity', '-s', type=click.Choice(['critical', 'high', 'medium', 'low'], case_sensitive=False),
-              default='low', help='最低风险等级过滤')
+              default='low', help='最低风险等级过滤：critical/high/medium/low（默认：low）')
 def main(input_path, output_dir, format, severity):
     """
     智能合约安全审计工具
     
     扫描 Solidity 智能合约，检测安全漏洞并生成报告。
     
-    INPUT_PATH: 要扫描的合约文件或目录路径
+    使用示例：
+    
+    \b
+    扫描单文件：
+      python -m contract_auditor.main examples/single_file_1.sol
+    
+    \b
+    扫描项目目录：
+      python -m contract_auditor.main examples/project/contracts/
+    
+    \b
+    指定输出目录：
+      python -m contract_auditor.main contract.sol -o ./reports/
+    
+    \b
+    只生成JSON报告：
+      python -m contract_auditor.main contract.sol -f json
+    
+    \b
+    只显示高危问题：
+      python -m contract_auditor.main contract.sol -s high
     """
+    # 检查是否提供了输入路径
+    if input_path is None:
+        print(Fore.YELLOW + "\n" + "="*60)
+        print("  智能合约安全审计工具")
+        print("="*60 + Style.RESET_ALL)
+        print(Fore.CYAN + "\n提示: 请指定要扫描的合约文件或目录路径" + Style.RESET_ALL)
+        print(Fore.CYAN + "使用 -h 或 --help 查看详细帮助信息\n" + Style.RESET_ALL)
+        print("快速示例：")
+        print("  python -m contract_auditor.main examples/single_file_1.sol")
+        print("  python -m contract_auditor.main examples/project/contracts/")
+        print("  python -m contract_auditor.main -h  # 查看完整帮助")
+        sys.exit(0)
+    
+    # 验证路径是否存在
+    input_path_obj = Path(input_path)
+    if not input_path_obj.exists():
+        print(Fore.RED + f"错误: 路径不存在: {input_path}" + Style.RESET_ALL)
+        print(Fore.CYAN + "使用 -h 或 --help 查看帮助信息" + Style.RESET_ALL)
+        sys.exit(1)
+    
     try:
         print(Fore.CYAN + Style.BRIGHT + "\n" + "="*60)
         print("  智能合约安全审计工具")
@@ -158,7 +205,6 @@ def main(input_path, output_dir, format, severity):
         print(Fore.GREEN + f"找到 {len(files)} 个 Solidity 文件" + Style.RESET_ALL)
         
         # 分类文件：区分单文件和项目
-        input_path_obj = Path(input_path)
         is_single_file = input_path_obj.is_file()
         
         if is_single_file:

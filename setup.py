@@ -9,7 +9,7 @@ setup(
     name="contract-auditor",
     version="1.0.0",
     description="智能合约安全审计工具",
-    author="Your Name",
+    author="tr3",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=find_packages(),
