@@ -11,17 +11,19 @@ class CallGraphAnalyzer:
     def __init__(self):
         self.graph = nx.DiGraph()  # 有向图
     
-    def analyze(self, ast: AST) -> nx.DiGraph:
+    def analyze(self, ast: AST, clear: bool = True) -> nx.DiGraph:
         """
         构建调用图
         
         Args:
             ast: AST对象
+            clear: 是否清空之前的图（默认True，用于单文件；False用于合并多文件）
             
         Returns:
             调用图（NetworkX DiGraph）
         """
-        self.graph.clear()
+        if clear:
+            self.graph.clear()
         
         for contract in ast.contracts:
             contract_name = contract.name
@@ -105,6 +107,59 @@ class CallGraphAnalyzer:
         except:
             return []
     
+    def to_simple_text(self) -> str:
+        """生成简单的文本格式调用图"""
+        if not self.graph.nodes():
+            return "调用图为空"
+        
+        lines = []
+        
+        # 按合约分组
+        contracts = {}
+        for node in self.graph.nodes():
+            node_data = self.graph.nodes[node]
+            node_type = node_data.get('type', 'unknown')
+            
+            if node_type == 'contract':
+                contract_name = node
+                if contract_name not in contracts:
+                    contracts[contract_name] = {'functions': []}
+            elif node_type == 'function':
+                contract_name = node_data.get('contract', '')
+                if contract_name not in contracts:
+                    contracts[contract_name] = {'functions': []}
+                func_name = node_data.get('function', node)
+                contracts[contract_name]['functions'].append((node, func_name))
+        
+        # 为每个合约生成调用图
+        for contract_name, data in contracts.items():
+            lines.append(f"\n【{contract_name}】")
+            
+            # 只显示有调用关系的函数
+            has_calls = False
+            for func_id, func_name in data['functions']:
+                # 查找这个函数调用的其他函数
+                out_edges = list(self.graph.out_edges(func_id))
+                if out_edges:
+                    has_calls = True
+                    for edge in out_edges:
+                        target = edge[1]
+                        target_data = self.graph.nodes[target]
+                        edge_data = self.graph.edges[edge]
+                        call_type = edge_data.get('call_type', 'internal')
+                        
+                        if target_data.get('type') == 'function':
+                            target_func = target_data.get('function', target)
+                            lines.append(f"  {func_name} → {target_func}")
+                        elif target_data.get('type') == 'external_call':
+                            ext_type = target_data.get('call_type', 'call')
+                            lines.append(f"  {func_name} → [外部调用: {ext_type}]")
+            
+            if not has_calls:
+                lines.append("  (无调用关系)")
+        
+        return "\n".join(lines) if lines else "无调用关系"
+    
     def to_dict(self) -> Dict:
         """转换为字典格式（用于JSON报告）"""
         nodes = []
@@ -128,6 +183,7 @@ class CallGraphAnalyzer:
         
         return {
             "nodes": nodes,
-            "edges": edges
+            "edges": edges,
+            "simple_text": self.to_simple_text()  # 添加简单文本图
         }
 

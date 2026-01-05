@@ -80,12 +80,18 @@ def _process_files(files: List[Tuple[str, str]], parser, detectors,
     control_flow_data = {}
     data_flow_data = {}
     
+    # 调用图分析：合并所有文件的调用图
+    for i, ast in enumerate(all_asts):
+        # 第一个文件清空图，后续文件追加到图中
+        clear_graph = (i == 0)
+        call_graph = call_graph_analyzer.analyze(ast, clear=clear_graph)
+    
+    # 所有文件分析完成后，生成调用图数据
+    if all_asts:
+        call_graph_data = call_graph_analyzer.to_dict()
+    
+    # 其他分析
     for ast in all_asts:
-        # 调用图分析
-        call_graph = call_graph_analyzer.analyze(ast)
-        if call_graph_data is None:
-            call_graph_data = call_graph_analyzer.to_dict()
-        
         # 污点分析
         paths = taint_analyzer.analyze(ast)
         taint_paths.extend(paths)
@@ -142,33 +148,7 @@ def _filter_by_severity(issues: List, severity: str):
 @click.option('--severity', '-s', type=click.Choice(['critical', 'high', 'medium', 'low'], case_sensitive=False),
               default='low', help='最低风险等级过滤：critical/high/medium/low（默认：low）')
 def main(input_path, output_dir, format, severity):
-    """
-    智能合约安全审计工具
-    
-    扫描 Solidity 智能合约，检测安全漏洞并生成报告。
-    
-    使用示例：
-    
-    \b
-    扫描单文件：
-      python -m contract_auditor.main examples/single_file_1.sol
-    
-    \b
-    扫描项目目录：
-      python -m contract_auditor.main examples/project/contracts/
-    
-    \b
-    指定输出目录：
-      python -m contract_auditor.main contract.sol -o ./reports/
-    
-    \b
-    只生成JSON报告：
-      python -m contract_auditor.main contract.sol -f json
-    
-    \b
-    只显示高危问题：
-      python -m contract_auditor.main contract.sol -s high
-    """
+
     # 检查是否提供了输入路径
     if input_path is None:
         print(Fore.YELLOW + "\n" + "="*60)

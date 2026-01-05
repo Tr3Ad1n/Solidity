@@ -331,15 +331,12 @@
             <div class="section">
                 <h2 class="section-title">🔗 调用图分析</h2>
                 <div class="call-graph">
-                    <p>调用图包含 {{ call_graph.nodes|length }} 个节点和 {{ call_graph.edges|length }} 条边。</p>
+                    <!-- 简单文本调用图 -->
+                    {% if call_graph.simple_text %}
                     <div style="margin-top: 15px;">
-                        <h4>节点列表:</h4>
-                        <ul style="margin-top: 10px; margin-left: 20px;">
-                            {% for node in call_graph.nodes %}
-                            <li style="margin: 5px 0;">{{ node.label }} ({{ node.type }})</li>
-                            {% endfor %}
-                        </ul>
+                        <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-wrap: break-word; margin: 0;">{{ call_graph.simple_text }}</pre>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
