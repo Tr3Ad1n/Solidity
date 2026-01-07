@@ -7,7 +7,7 @@ from ..utils.severity import Severity
 
 
 class DelegatecallDetector(BaseDetector):
-    """检测危险的delegatecall使用"""
+
     
     def detect(self, ast: AST) -> List[Issue]:
         """检测delegatecall风险"""
@@ -19,7 +19,6 @@ class DelegatecallDetector(BaseDetector):
                 delegatecalls = [c for c in func.calls if c.call_type == 'delegatecall']
                 
                 for call in delegatecalls:
-                    # delegatecall总是危险的，需要特别小心
                     is_controlled = self._is_user_controlled(func, call)
                     
                     if is_controlled:
@@ -47,8 +46,7 @@ class DelegatecallDetector(BaseDetector):
     
     def _is_user_controlled(self, func: FunctionNode, call: CallNode) -> bool:
         """检查delegatecall目标是否可能被用户控制"""
-        # 简化：检查是否是函数参数或状态变量
-        # 如果delegatecall的目标来自msg.sender、函数参数或可修改的状态变量，认为是用户控制的
+
         
         import re
         

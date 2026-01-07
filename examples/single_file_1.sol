@@ -21,7 +21,7 @@ contract VulnerableVault {
         balances[msg.sender] -= amount;
     }
     
-    // 缺少权限控制 - 任何人都可以调用
+    // 缺少权限控制
     function setOwner(address newOwner) public {
         owner = newOwner;
     }

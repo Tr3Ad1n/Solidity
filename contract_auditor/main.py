@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import List, Tuple, Dict
 
-# 支持直接运行和作为模块运行
 try:
     from .parser.solidity_parser import SolidityParser
     from .detectors.reentrancy_detector import ReentrancyDetector
@@ -25,9 +24,7 @@ try:
     from .utils.file_utils import find_solidity_files, get_output_directory, classify_files
     from .utils.severity import Severity
 except ImportError:
-    # 如果相对导入失败，尝试绝对导入（直接运行时）
     import os
-    # 添加项目根目录到路径
     project_root = Path(__file__).parent.parent
     sys.path.insert(0, str(project_root))
     

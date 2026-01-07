@@ -82,8 +82,5 @@ class ExternalCallDetector(BaseDetector):
         return ""
     
     def _is_trusted_address(self, func: FunctionNode, call: CallNode) -> bool:
-        """检查目标地址是否可信"""
-        # 简化：检查是否是合约内部地址或已知安全地址
-        # 实际应该进行更复杂的分析
         return False
 

@@ -21,7 +21,7 @@ class AccessControlDetector(BaseDetector):
         
         for contract in ast.contracts:
             for func in contract.functions:
-                # 检查是否是关键函数
+                # 检查关键函数
                 is_critical = any(cf in func.name.lower() for cf in critical_functions)
                 
                 if not is_critical:
@@ -29,11 +29,11 @@ class AccessControlDetector(BaseDetector):
                     if not func.state_changes:
                         continue
                 
-                # 检查是否有权限控制
+                # 检查有权限控制
                 has_access_control = self._has_access_control(func, contract)
                 
                 if not has_access_control and (is_critical or func.state_changes):
-                    # 检查是否是构造函数或view函数
+                    # 检查构造函数或view函数
                     if func.name == contract.name or func.is_view or func.is_pure:
                         continue
                     
@@ -53,7 +53,7 @@ class AccessControlDetector(BaseDetector):
     
     def _has_access_control(self, func: FunctionNode, contract) -> bool:
         """检查是否有访问控制"""
-        # 检查修饰符
+
         access_control_modifiers = [
             'onlyOwner', 'onlyAdmin', 'onlyRole', 'onlyWhitelist',
             'onlyAuthorized', 'hasRole', 'isOwner'
@@ -67,7 +67,6 @@ class AccessControlDetector(BaseDetector):
         access_control_keywords = ['require', 'assert', 'onlyOwner', 'msg.sender']
         body_lower = func.body.lower()
         
-        # 简单检查：如果函数体中有require且涉及msg.sender，可能有权限控制
         if 'require' in body_lower and 'msg.sender' in body_lower:
             return True
         
